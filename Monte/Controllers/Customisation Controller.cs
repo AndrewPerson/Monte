@@ -9,7 +9,7 @@ namespace Monte.Customisation
         {
             return new ()
             {
-                apiversion = 1,
+                apiversion = "1",
                 author = "AndrewPerson",
                 color = "#8599ff",
                 head = "bendr",

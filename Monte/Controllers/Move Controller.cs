@@ -1,5 +1,4 @@
-﻿using System.Net.Mime;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Monte.Game;
@@ -18,6 +17,16 @@ namespace Monte.Moves
 
             var board = JsonSerializer.Deserialize<Board>(root.GetProperty("board").GetRawText());
             var me = JsonSerializer.Deserialize<Snake>(root.GetProperty("you").GetRawText());
+
+            var turn = root.GetProperty("turn").GetInt32();
+
+            if (turn < 3)
+            {
+                return new Move
+                {
+                    direction = Direction.Up
+                };
+            }
 
             var futures = await Search.PropagateForwards(me.Length, me, board);
 

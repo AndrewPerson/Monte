@@ -190,7 +190,15 @@ namespace Monte.Carlo
             {
                 X = snake.Head.X + moveX,
                 Y = snake.Head.Y + moveY
-            };            
+            };
+
+            if (snake.Head.X < 0 || snake.Head.X >= board.Width || snake.Head.Y < 0 || snake.Head.Y >= board.Height)
+            {
+                for (int n = snake.Body.Count; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
+
+                delete[snakeIndex] = true;
+                return;
+            }
 
             if (board.Food.Contains(snake.Head))
             {
@@ -218,19 +226,10 @@ namespace Monte.Carlo
                                 delete[snakeIndex] = true;
                                 delete[n] = true;
                             }
-                            else if (snake.Length > other.Length)
-                            {
-                                delete[n] = true;
-                            }
-                            else
-                            {
-                                delete[snakeIndex] = true;
-                            }
+                            else if (snake.Length > other.Length) delete[n] = true;
+                            else delete[snakeIndex] = true;
                         }
-                        else
-                        {
-                            delete[snakeIndex] = true;
-                        }
+                        else delete[snakeIndex] = true;
 
                         if (snake.Health == 0) delete[snakeIndex] = true;
 

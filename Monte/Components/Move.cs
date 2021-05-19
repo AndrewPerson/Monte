@@ -25,6 +25,15 @@ namespace Monte.Moves
                 if (direction == Direction.Right) return "right";
                 return "up";
             }
+
+            set
+            {
+                var v = value.ToLower();
+                if (v == "up") direction = Direction.Up;
+                else if (v == "down") direction = Direction.Down;
+                else if (v == "left") direction = Direction.Left;
+                else if (v == "right") direction = Direction.Right;
+            }
         }
 
         [JsonPropertyName("shout")]

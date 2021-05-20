@@ -19,7 +19,7 @@ namespace Monte.Carlo
 
             await callback(items);
 
-            for (int n = 0; n < totalCount; n++)
+            for (int n = 0; n < totalCount - 1; n++)
             {
                 for (int i = 0; i < chooseCount; i++)
                 {

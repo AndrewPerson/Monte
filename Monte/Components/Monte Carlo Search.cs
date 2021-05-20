@@ -61,28 +61,33 @@ namespace Monte.Carlo
             }
 
             Direction result = Direction.Up;
-            float maxRanking = upAlive / upTotal;
+            float maxRanking = upTotal == 0 ? 0 : upAlive / upTotal;
 
-            float downRanking = downAlive / downTotal;
+            float downRanking = downTotal == 0 ? 0 : downAlive / downTotal;
             if (downRanking > maxRanking)
             {
                 maxRanking = downRanking;
                 result = Direction.Down;
             }
 
-            float leftRanking = leftAlive / leftTotal;
+            float leftRanking = leftTotal == 0 ? 0 : leftAlive / leftTotal;
             if (leftRanking > maxRanking)
             {
                 maxRanking = leftRanking;
                 result = Direction.Left;
             }
 
-            float rightRanking = rightAlive / rightTotal;
+            float rightRanking = rightTotal == 0 ? 0: rightAlive / rightTotal;
             if (rightRanking > maxRanking)
             {
                 maxRanking = rightRanking;
                 result = Direction.Right;
             }
+
+            Console.WriteLine("INFO: UP RANKING: " + (upTotal == 0 ? 0 : upAlive / upTotal));
+            Console.WriteLine("INFO: DOWN RANKING: " + downRanking);
+            Console.WriteLine("INFO: LEFT RANKING: " + leftRanking);
+            Console.WriteLine("INFO: RIGHT RANKING: " + rightRanking);
 
             return result;
         }
@@ -116,6 +121,12 @@ namespace Monte.Carlo
 
         private static async Task<int> FindMe(string myId, Board board)
         {
+            //TODO Find out why some boards are null.
+            if (board == null)
+            {
+                Console.WriteLine("INFO: NULL BOARD");
+                return -1;
+            }
             return await Task.Run(() => {
                 for (int i = 0; i < board.Snakes.Count; i++) if (board.Snakes[i].ID == myId) return i; 
                 return -1;
@@ -152,6 +163,12 @@ namespace Monte.Carlo
 
         public static async Task<Board[]> Peek(Board board)
         {
+            if (board == null)
+            {
+                Console.WriteLine("INFO: NULL BOARD WHEN PEEKING");
+                return new Board[0];
+            }
+
             Board[] result = new Board[(int) Math.Pow(4, board.Snakes.Count)];
 
             int permCount = 0;
@@ -194,7 +211,8 @@ namespace Monte.Carlo
 
             if (snake.Head.X < 0 || snake.Head.X >= board.Width || snake.Head.Y < 0 || snake.Head.Y >= board.Height)
             {
-                for (int n = snake.Body.Count; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
+                for (int n = snake.Body.Count - 1; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
+                snake.Body[0] = snake.Head;
 
                 delete[snakeIndex] = true;
                 return;
@@ -207,9 +225,15 @@ namespace Monte.Carlo
                 board.Food.Remove(snake.Head);
                 snake.Health = 100;
             }
-            else for (int n = snake.Body.Count; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
+            else for (int n = snake.Body.Count - 1; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
             
             snake.Body[0] = snake.Head;
+
+            if (snake.Body.LastIndexOf(snake.Head) != 0)
+            {
+                delete[snakeIndex] = true;
+                return;
+            }
 
             for (int n = 0; n < snakeIndex; n++)
             {

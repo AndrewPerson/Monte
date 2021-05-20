@@ -92,6 +92,15 @@ namespace Monte.Carlo
             return result;
         }
 
+        private static Direction GetPreviousMove(Snake snake)
+        {
+            var neck = snake.Body[1];
+            if (snake.Head.X > neck.X) return Direction.Right;
+            else if (snake.Head.X < neck.X) return Direction.Left;
+            else if (snake.Head.Y > neck.Y) return Direction.Up;
+            else return Direction.Down;
+        }
+
         public static async Task<List<Node>> PropagateForwards(int moves, Snake me, Board board)
         {
             Board[] futures = await Peek(board);
@@ -103,71 +112,77 @@ namespace Monte.Carlo
 
                 Node node = new Node
                 {
-                    board = future
+                    board = future,
+                    originalMove = GetPreviousMove(board.Snakes[index])
                 };
-
-                var neck = me.Body[1];
-
-                if (me.Head.X > neck.X) node.originalMove = Direction.Right;
-                else if (me.Head.X < neck.X) node.originalMove = Direction.Left;
-                else if (me.Head.Y > neck.Y) node.originalMove = Direction.Up;
-                else node.originalMove = Direction.Down;
 
                 nodes.Add(node);
             }
 
-            return await PropagateRecursive(moves, 1, nodes);
+            return await PropagateRecursive(moves, 1, me.ID, nodes);
         }
 
         private static async Task<int> FindMe(string myId, Board board)
         {
+            /*
             //TODO Find out why some boards are null.
             if (board == null)
             {
                 Console.WriteLine("INFO: NULL BOARD");
                 return -1;
             }
+            */
+
             return await Task.Run(() => {
                 for (int i = 0; i < board.Snakes.Count; i++) if (board.Snakes[i].ID == myId) return i; 
                 return -1;
             });
         }
 
-        private static async Task<List<Node>> PropagateRecursive(int maxMoves, int currentMoves, List<Node> nodes)
+        private static async Task<List<Node>> PropagateRecursive(int maxMoves, int currentMoves, string myId, List<Node> nodes)
         {
             List<Node> result = new List<Node>();
+            List<Node> terminated = new List<Node>();
 
             foreach (var node in nodes)
             {
-                var futures = await Peek(node.board);
-                var newNodes = new Node[futures.Length];
-                
-                await Task.Run(() => {
-                    for (int i = 0; i < newNodes.Length; i++)
-                    {
-                        newNodes[i] = new Node
+                if (node.board.Snakes.Count == 1) terminated.Add(node);
+                else if (await FindMe(myId, node.board) == -1) terminated.Add(node);
+                else
+                {
+                    var futures = await Peek(node.board);
+                    var newNodes = new Node[futures.Length];
+                    
+                    await Task.Run(() => {
+                        for (int i = 0; i < newNodes.Length; i++)
                         {
-                            board = futures[i],
-                            originalMove = node.originalMove
-                        };
-                    }
-                });
+                            newNodes[i] = new Node
+                            {
+                                board = futures[i],
+                                originalMove = node.originalMove
+                            };
+                        }
+                    });
 
-                result.AddRange(newNodes);
+                    result.AddRange(newNodes);
+                }
             }
 
             currentMoves++;
-            if (currentMoves < maxMoves) return await PropagateRecursive(maxMoves, currentMoves, result);
-            else return result;
+            if (currentMoves < maxMoves) result = await PropagateRecursive(maxMoves, currentMoves, myId, result);
+            result.AddRange(terminated);
+            return result;
         }
 
         public static async Task<Board[]> Peek(Board board)
         {
+            /*
             if (board == null)
             {
                 Console.WriteLine("INFO: NULL BOARD WHEN PEEKING");
                 return new Board[0];
             }
+            */
 
             Board[] result = new Board[(int) Math.Pow(4, board.Snakes.Count)];
 

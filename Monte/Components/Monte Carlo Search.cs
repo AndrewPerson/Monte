@@ -84,10 +84,12 @@ namespace Monte.Carlo
                 result = Direction.Right;
             }
 
+            /*
             Console.WriteLine("INFO: UP RANKING: " + (upTotal == 0 ? 0 : upAlive / upTotal));
             Console.WriteLine("INFO: DOWN RANKING: " + downRanking);
             Console.WriteLine("INFO: LEFT RANKING: " + leftRanking);
             Console.WriteLine("INFO: RIGHT RANKING: " + rightRanking);
+            */
 
             return result;
         }
@@ -124,15 +126,6 @@ namespace Monte.Carlo
 
         private static async Task<int> FindMe(string myId, Board board)
         {
-            /*
-            //TODO Find out why some boards are null.
-            if (board == null)
-            {
-                Console.WriteLine("INFO: NULL BOARD");
-                return -1;
-            }
-            */
-
             return await Task.Run(() => {
                 for (int i = 0; i < board.Snakes.Count; i++) if (board.Snakes[i].ID == myId) return i; 
                 return -1;

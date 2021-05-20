@@ -19,8 +19,6 @@ namespace Monte.Moves
 
             var turn = root.GetProperty("turn").GetInt32();
 
-            Console.WriteLine("INFO: TURN: " + turn);
-
             if (turn < 2)
             {
                 if (me.Head.X > board.Width / 2) return new Move
@@ -43,7 +41,7 @@ namespace Monte.Moves
 
             var futures = await Search.PropagateForwards(me.Length, me, board);
 
-            Console.WriteLine("INFO: FUTURES: " + futures.Count);
+            //Console.WriteLine("INFO: FUTURES: " + futures.Count);
 
             return new Move
             {

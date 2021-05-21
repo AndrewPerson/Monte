@@ -17,14 +17,24 @@ namespace Monte.Carlo
             List<T> perm = new List<T>(chooseCount);
             for (int i = 0; i < chooseCount; i++) perm.Add(items[0]);
 
-            await callback(items);
+            await callback(perm);
 
             for (int n = 0; n < totalCount - 1; n++)
             {
+                bool updateNext = false;
                 for (int i = 0; i < chooseCount; i++)
                 {
-                    if (indexes[i] == maxCount) indexes[i] = 0;
-                    else indexes[i]++;
+                    if (i == 0 || updateNext)
+                    {
+                        updateNext = false;
+                        indexes[i]++;
+                    }
+                    
+                    if (indexes[i] == itemCount)
+                    {
+                        updateNext = true;
+                        indexes[i] = 0;
+                    }
 
                     perm[i] = items[indexes[i]];
                 }

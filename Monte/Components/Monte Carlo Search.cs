@@ -61,35 +61,39 @@ namespace Monte.Carlo
             }
 
             Direction result = Direction.Up;
-            float maxRanking = upTotal == 0 ? 0 : upAlive / upTotal;
+            float maxRanking = upTotal == 0 ? 0 : upAlive / (float) upTotal;
 
-            float downRanking = downTotal == 0 ? 0 : downAlive / downTotal;
+            float downRanking = downTotal == 0 ? 0 : downAlive / (float) downTotal;
             if (downRanking > maxRanking)
             {
                 maxRanking = downRanking;
                 result = Direction.Down;
             }
 
-            float leftRanking = leftTotal == 0 ? 0 : leftAlive / leftTotal;
+            float leftRanking = leftTotal == 0 ? 0 : leftAlive / (float) leftTotal;
             if (leftRanking > maxRanking)
             {
                 maxRanking = leftRanking;
                 result = Direction.Left;
             }
 
-            float rightRanking = rightTotal == 0 ? 0: rightAlive / rightTotal;
+            float rightRanking = rightTotal == 0 ? 0: rightAlive / (float) rightTotal;
             if (rightRanking > maxRanking)
             {
                 maxRanking = rightRanking;
                 result = Direction.Right;
             }
 
-            /*
+            
             Console.WriteLine("INFO: UP RANKING: " + (upTotal == 0 ? 0 : upAlive / upTotal));
             Console.WriteLine("INFO: DOWN RANKING: " + downRanking);
             Console.WriteLine("INFO: LEFT RANKING: " + leftRanking);
             Console.WriteLine("INFO: RIGHT RANKING: " + rightRanking);
-            */
+
+            Console.WriteLine("INFO: UP ALIVE: " + upAlive);
+            Console.WriteLine("INFO: DOWN ALIVE: " + downAlive);
+            Console.WriteLine("INFO: LEFT ALIVE: " + leftAlive);
+            Console.WriteLine("INFO: RIGHT ALIVE: " + rightAlive);
 
             return result;
         }
@@ -97,31 +101,40 @@ namespace Monte.Carlo
         private static Direction GetPreviousMove(Snake snake)
         {
             var neck = snake.Body[1];
+
             if (snake.Head.X > neck.X) return Direction.Right;
             else if (snake.Head.X < neck.X) return Direction.Left;
             else if (snake.Head.Y > neck.Y) return Direction.Up;
             else return Direction.Down;
         }
 
-        public static async Task<List<Node>> PropagateForwards(int moves, Snake me, Board board)
+        public static async Task<List<Node>> LookForwards(int moves, Snake me, Board board)
         {
             Board[] futures = await Peek(board);
             List<Node> nodes = new List<Node>(futures.Length);
-            
+
             foreach (var future in futures)
             {
                 int index = await FindMe(me.ID, future);
 
-                Node node = new Node
+                if (index != -1)
                 {
-                    board = future,
-                    originalMove = GetPreviousMove(board.Snakes[index])
-                };
+                    Node node = new Node
+                    {
+                        board = future,
+                        originalMove = GetPreviousMove(board.Snakes[index])
+                    };
 
-                nodes.Add(node);
+                    nodes.Add(node);
+                }
             }
 
-            return await PropagateRecursive(moves, 1, me.ID, nodes);
+            foreach (var node in nodes)
+            {
+                Console.WriteLine("INFO: NODE: " + node.originalMove);
+            }
+
+            return await LookRecursive(moves, 1, me.ID, nodes);
         }
 
         private static async Task<int> FindMe(string myId, Board board)
@@ -132,7 +145,7 @@ namespace Monte.Carlo
             });
         }
 
-        private static async Task<List<Node>> PropagateRecursive(int maxMoves, int currentMoves, string myId, List<Node> nodes)
+        private static async Task<List<Node>> LookRecursive(int maxMoves, int currentMoves, string myId, List<Node> nodes)
         {
             List<Node> result = new List<Node>();
             List<Node> terminated = new List<Node>();
@@ -162,7 +175,7 @@ namespace Monte.Carlo
             }
 
             currentMoves++;
-            if (currentMoves < maxMoves) result = await PropagateRecursive(maxMoves, currentMoves, myId, result);
+            if (currentMoves < maxMoves) result = await LookRecursive(maxMoves, currentMoves, myId, result);
             result.AddRange(terminated);
             return result;
         }
@@ -186,7 +199,7 @@ namespace Monte.Carlo
 
                 bool[] delete = new bool[newBoard.Snakes.Count];
 
-                for (int i = 0; i < newBoard.Snakes.Count; i++) await Task.Run(() => {MoveSnake(i, perm[i], board, ref delete);});
+                for (int i = 0; i < newBoard.Snakes.Count; i++) await Task.Run(() => {MoveSnake(i, perm[i], ref newBoard, ref delete);});
                 
                 await Task.Run(() => {for (int i = delete.Length - 1; i >= 0; i--) if (delete[i]) newBoard.Snakes.RemoveAt(i);});
 
@@ -197,7 +210,7 @@ namespace Monte.Carlo
             return result;
         }
 
-        private static void MoveSnake(int snakeIndex, Direction move, Board board, ref bool[] delete)
+        private static void MoveSnake(int snakeIndex, Direction move, ref Board board, ref bool[] delete)
         {
             int moveX = 0;
             int moveY = 0;
@@ -217,18 +230,9 @@ namespace Monte.Carlo
                 Y = snake.Head.Y + moveY
             };
 
-            if (snake.Head.X < 0 || snake.Head.X >= board.Width || snake.Head.Y < 0 || snake.Head.Y >= board.Height)
-            {
-                for (int n = snake.Body.Count - 1; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
-                snake.Body[0] = snake.Head;
-
-                delete[snakeIndex] = true;
-                return;
-            }
-
             if (board.Food.Contains(snake.Head))
             {
-                snake.Body.Add(snake.Body[^1]);
+                snake.Body.Add(snake.Body[snake.Body.Count - 1]);
                 for (int n = snake.Body.Count - 1; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
                 board.Food.Remove(snake.Head);
                 snake.Health = 100;
@@ -236,6 +240,14 @@ namespace Monte.Carlo
             else for (int n = snake.Body.Count - 1; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
             
             snake.Body[0] = snake.Head;
+
+            if (snake.Health == 0) delete[snakeIndex] = true;
+
+            if (snake.Head.X < 0 || snake.Head.X >= board.Width || snake.Head.Y < 0 || snake.Head.Y >= board.Height)
+            {
+                delete[snakeIndex] = true;
+                return;
+            }
 
             if (snake.Body.LastIndexOf(snake.Head) != 0)
             {
@@ -263,14 +275,10 @@ namespace Monte.Carlo
                         }
                         else delete[snakeIndex] = true;
 
-                        if (snake.Health == 0) delete[snakeIndex] = true;
-
                         return;
                     }
                 }
             }
-
-            if (snake.Health == 0) delete[snakeIndex] = true;
         }
 
         private static async Task<Board> Clone(Board board)

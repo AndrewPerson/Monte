@@ -39,7 +39,7 @@ namespace Monte.Moves
                 };
             }
 
-            var futures = await Search.PropagateForwards(me.Length, me, board);
+            var futures = await Search.LookForwards(1, me, board);
 
             //Console.WriteLine("INFO: FUTURES: " + futures.Count);
 

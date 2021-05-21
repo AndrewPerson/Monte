@@ -10,7 +10,7 @@ namespace Monte
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             /*
             List<Direction> directions = new List<Direction> {

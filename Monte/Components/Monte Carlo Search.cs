@@ -84,17 +84,6 @@ namespace Monte.Carlo
                 result = Direction.Right;
             }
 
-            
-            Console.WriteLine("INFO: UP RANKING: " + (upTotal == 0 ? 0 : upAlive / upTotal));
-            Console.WriteLine("INFO: DOWN RANKING: " + downRanking);
-            Console.WriteLine("INFO: LEFT RANKING: " + leftRanking);
-            Console.WriteLine("INFO: RIGHT RANKING: " + rightRanking);
-
-            Console.WriteLine("INFO: UP ALIVE: " + upAlive);
-            Console.WriteLine("INFO: DOWN ALIVE: " + downAlive);
-            Console.WriteLine("INFO: LEFT ALIVE: " + leftAlive);
-            Console.WriteLine("INFO: RIGHT ALIVE: " + rightAlive);
-
             return result;
         }
 
@@ -122,16 +111,11 @@ namespace Monte.Carlo
                     Node node = new Node
                     {
                         board = future,
-                        originalMove = GetPreviousMove(board.Snakes[index])
+                        originalMove = GetPreviousMove(future.Snakes[index])
                     };
 
                     nodes.Add(node);
                 }
-            }
-
-            foreach (var node in nodes)
-            {
-                Console.WriteLine("INFO: NODE: " + node.originalMove);
             }
 
             return await LookRecursive(moves, 1, me.ID, nodes);
@@ -182,26 +166,26 @@ namespace Monte.Carlo
 
         public static async Task<Board[]> Peek(Board board)
         {
-            /*
-            if (board == null)
-            {
-                Console.WriteLine("INFO: NULL BOARD WHEN PEEKING");
-                return new Board[0];
-            }
-            */
-
             Board[] result = new Board[(int) Math.Pow(4, board.Snakes.Count)];
 
             int permCount = 0;
-            await Combinations.RepeatingCombinations(Moves, board.Snakes.Count, async (perm) =>
+            await Combinations.RepeatingCombinations(Moves, board.Snakes.Count, async perm =>
             {
                 Board newBoard = await Clone(board);
 
                 bool[] delete = new bool[newBoard.Snakes.Count];
 
-                for (int i = 0; i < newBoard.Snakes.Count; i++) await Task.Run(() => {MoveSnake(i, perm[i], ref newBoard, ref delete);});
-                
-                await Task.Run(() => {for (int i = delete.Length - 1; i >= 0; i--) if (delete[i]) newBoard.Snakes.RemoveAt(i);});
+                for (int i = 0; i < newBoard.Snakes.Count; i++)
+                    await Task.Run(() =>
+                    {
+                        newBoard.Snakes[i] = MoveSnake(i, perm[i], ref newBoard, ref delete);
+                    });
+                    
+                await Task.Run(() =>
+                {
+                    for (int i = delete.Length - 1; i >= 0; i--)
+                        if (delete[i]) newBoard.Snakes.RemoveAt(i);
+                });
 
                 result[permCount] = newBoard;
                 permCount++;
@@ -210,7 +194,7 @@ namespace Monte.Carlo
             return result;
         }
 
-        private static void MoveSnake(int snakeIndex, Direction move, ref Board board, ref bool[] delete)
+        private static Snake MoveSnake(int snakeIndex, Direction move, ref Board board, ref bool[] delete)
         {
             int moveX = 0;
             int moveY = 0;
@@ -230,29 +214,46 @@ namespace Monte.Carlo
                 Y = snake.Head.Y + moveY
             };
 
+            bool hittingSelf = false;
             if (board.Food.Contains(snake.Head))
             {
                 snake.Body.Add(snake.Body[snake.Body.Count - 1]);
-                for (int n = snake.Body.Count - 1; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
+                for (int n = snake.Body.Count - 1; n > 0; n--)
+                {
+                    snake.Body[n] = snake.Body[n - 1];
+                    if (snake.Body[n] == snake.Head) hittingSelf = true;
+                }
+
                 board.Food.Remove(snake.Head);
                 snake.Health = 100;
             }
-            else for (int n = snake.Body.Count - 1; n > 0; n--) snake.Body[n] = snake.Body[n - 1];
+            else
+                for (int n = snake.Body.Count - 1; n > 0; n--)
+                {
+                    snake.Body[n] = snake.Body[n - 1];
+                    if (snake.Body[n] == snake.Head) hittingSelf = true;
+                }
             
+            if (snake.Body[0] == snake.Head) hittingSelf = true;
+
             snake.Body[0] = snake.Head;
 
-            if (snake.Health == 0) delete[snakeIndex] = true;
+            if (hittingSelf)
+            {
+                delete[snakeIndex] = true;
+                return snake;
+            }
+
+            if (snake.Health == 0)
+            {
+                delete[snakeIndex] = true;
+                return snake;
+            }
 
             if (snake.Head.X < 0 || snake.Head.X >= board.Width || snake.Head.Y < 0 || snake.Head.Y >= board.Height)
             {
                 delete[snakeIndex] = true;
-                return;
-            }
-
-            if (snake.Body.LastIndexOf(snake.Head) != 0)
-            {
-                delete[snakeIndex] = true;
-                return;
+                return snake;
             }
 
             for (int n = 0; n < snakeIndex; n++)
@@ -275,10 +276,12 @@ namespace Monte.Carlo
                         }
                         else delete[snakeIndex] = true;
 
-                        return;
+                        return snake;
                     }
                 }
             }
+
+            return snake;
         }
 
         private static async Task<Board> Clone(Board board)

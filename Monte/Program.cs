@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 using Monte.Moves;
+using Monte.Game;
 
 namespace Monte
 {
